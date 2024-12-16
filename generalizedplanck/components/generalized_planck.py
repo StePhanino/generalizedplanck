@@ -120,15 +120,14 @@ class GeneralizedPlanck(Component):
                  ideal_abs_coeff=None,
                  tail=None, 
                  reflectance=None,
-                 analytical=True,
+                 analytical=False,
                  **kwargs):
         
         self._reflectance = reflectance
-        self._ideal_abs = ideal_abs_coeff
         self._tail = tail
-        self.analytical = analytical
+        self._ideal_abs_coeff = ideal_abs_coeff
         self._aux_component_list = [self._reflectance,
-                                    self._ideal_abs,
+                                    self._ideal_abs_coeff,
                                     self._tail]
         self._kwargs = kwargs
         self._default_params = ['Eg', 'g', 'p', 'T', 'd', 'Efv', 'Efc']
@@ -155,7 +154,7 @@ class GeneralizedPlanck(Component):
         self.Efc.units = 'eV'
         self.Efv.value = Efv
         self.Efv.units = 'eV'
-        
+        self._analytical = analytical
         self.update_component()
         
     def update_component(self):
@@ -188,7 +187,7 @@ class GeneralizedPlanck(Component):
                     param.free = False
 
     # def integrand(self, e, x):
-    #      return self._ideal_abs.function(e)*self._tail.function(x-e)
+    #      return self._ideal_abs_coeff.function(e)*self._tail.function(x-e)
     def planck(self, x, mu=None):
         Efv = self.Efv.value
         Efc = self.Efc.value
@@ -223,34 +222,25 @@ class GeneralizedPlanck(Component):
             raise ValueError('Only c and v values allowed for band option')
     
     def abs_coeff_tail(self, x):
-        '''
-        TODO: Correct integration of analytical solution???
-        Possible solutions: 
-            - for eahc ideal absorption coefficient, put a tail as param and 
-              implement the explicit integral form as a method.
-              
-              def IdealAbsCoeff(Component):
-                  def __init__(self, Eg=1.4, a0=14800, E0=1.6, tail_component):
-                      init code
-                  def tail_conv(self):
-                      put simpy formula for explicit integral form if exists
-                
-        '''
-        Eg = self.Eg.value
-        a0 = self.a0.value
-        E0 = self.E0.value
-        g = self.g.value
-        if self.analytical:
-            y = x-Eg
-            _c1 = 0.25*a0*np.sqrt(g*np.pi/(E0-Eg))
-            _fpos = lambda y : (a0*np.sqrt(y/(E0-Eg)) 
-                                +_c1*(np.exp(y/g)*erfc(np.sqrt(y/g))
-                                      -np.exp(-y/g)*erfi(np.sqrt(y/g)))
-                                )
-            _fneg = lambda y : _c1*np.exp(y/g)
-            _f = np.piecewise(y, [y>=0, y<0], [_fpos, _fneg])
+        if self._analytical:
+            if 'tail_type' in self._ideal_abs_coeff.__dict__.keys():
+                tail_name = self._ideal_abs_coeff.tail_type
+                if tail_name == self._tail.name:
+                    # Analytical solution in idealabs can be used
+                    _f = self._ideal_abs_coeff.convolution_tail(x)
+                else: 
+                    message = (f"{self._ideal_abs_coeff.name} tail type - " 
+                               "{self._ideal_abs_coeff.tail_type} -"
+                               "does not match the {self._tail.name}.")
+                    raise Exception(message)
+            else:
+                message = (f"Not analytical convolution available for {self._ideal_abs_coeff.name}")
+                raise Exception(message)
         else:
-            integrand = lambda e : self._ideal_abs.function(e)*self._tail.function(x-e)
+            Eg = self.Eg.value
+            if 'include_tail' in self._ideal_abs_coeff.__dict__.keys():
+                self._ideal_abs_coeff.include_tail = False
+            integrand = lambda e : self._ideal_abs_coeff.function(e)*self._tail.function(x-e)
             _f = quad_vec(integrand, Eg, np.inf)[0]
         return _f
 
@@ -262,6 +252,10 @@ class GeneralizedPlanck(Component):
         return _f
     
     def absorption(self, x):
+        '''TODO - generalize to other absorption type. 
+        Here we assume a homogeneously excited slab.
+        '''
+    
         d = self.d.value/1e7 #a0 in abs_ideal in cm-1 and d in nm
         _f = ((1-self._reflectance.function(x)) 
                 * (1 - np.exp(-self.abs_coeff_tail_occupation(x)*d))

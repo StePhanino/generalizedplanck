@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from generalizedplanck.utils.useful_stuff import get_nk, compare_extent, overlap_array
+from generalizedplanck.utils import compare_extent, fit_signal, get_nk, overlap_array
 
 from generalizedplanck import components
 from generalizedplanck import utils
@@ -12,3 +12,5 @@ __all__ = ["components",
            "data"
            ]
 
+def __dir__():
+    return sorted(__all__)
