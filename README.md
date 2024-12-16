@@ -5,26 +5,25 @@ A starting point for defining a series of components for hyperspy to implement t
 In this first version we have defined 4 new components (in `/components` folder):
 
  - **Generalized Planck** component defined as:
-   $$
-   \Phi(E) = A(E) \times \frac{E^2}{4\pi^2\hbar^3c_0^2} \times 
-                \frac{1}{e^{\frac{E - \Delta E_f}{k_BT}}-1}\, \text{,}
-   $$ where we assume, in this first version, a dielectric slab uniformly excited : in this case we can write the absorption in the following way:
-   $$A(E) = \left[1-R(E)\right]\times\left[1-e^{-\alpha(E)d}\right] \, \text{.}$$ where the absorption coefficient is defined by the following convolution $$
-    \alpha_0(E) = \frac{1}{2g} \int_{-\infty}^{E-E_g} 
+   $$\Phi(E) = A(E) \times \frac{E^2}{4\pi^2\hbar^3c_0^2} \times 
+                \frac{1}{e^{\frac{E - \Delta E_f}{k_BT}}-1}\, \text{,}$$  
+   where we assume, in this first version, a dielectric slab uniformly excited : in this case we can write the absorption in the following way:
+   $$A(E) = \left[1-R(E)\right]\times\left[1-e^{-\alpha(E)d}\right] \, \text{.}$$
+   where the absorption coefficient is defined by the following convolution
+   $$\alpha_0(E) = \frac{1}{2g} \int_{-\infty}^{E-E_g} 
                 \alpha_{ideal}(E-\epsilon) 
                 \underbrace{e^{-\left|\tfrac{\epsilon}{g}\right|}}_\text{Urbach tail} 
-                \, d\epsilon \, \text{.}
-   $$
+                \, d\epsilon \, \text{.}$$ 
  - **Ideal Sqrt Absorption component** defined as:
-   $$ \alpha_{ideal}(E) = 
+   $$\alpha_{ideal}(E) = 
                 \begin{cases}
                 0 & \text{if} \quad E \le E_g \\
                 a_0 \sqrt{\frac{E-E_g}{E_0-E_g}} & \text{if} \quad E>E_g
-                \end{cases}
-   $$
+                \end{cases}$$
+
    If an analytical solution of the convolution with a tail (typically Urbach, stored in the `tail_type` attribute of the component) is available, it's stored in the `convolution_tail` method. See the [Urbach tail convolution](#Urbach-tail-convolution) section below.
  - **Urbach tail component** defined as:
-   $$ \tau(E) = \tfrac{1}{2g} e^{-\left|\tfrac{E}{g}\right|} \, \text{,}$$
+   $$\tau(E) = \tfrac{1}{2g} e^{-\left|\tfrac{E}{g}\right|} \, \text{,}$$
    where `g` is the tail width.
    
  - **Reflectance component** - it calculates the R(E) from Fresnel coefficients.
